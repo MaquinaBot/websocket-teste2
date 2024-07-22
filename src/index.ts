@@ -20,6 +20,10 @@ interface Quote {
 
 let quotes: Quote[] = [];
 
+app.get("/acorda", (req: Request, res: Response) => {
+  res.status(200).send("Acordei!");
+});
+
 // Endpoint para receber as cotações
 app.post("/quote", (req: Request, res: Response) => {
   const quote: Quote = req.body;
