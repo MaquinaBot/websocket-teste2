@@ -1,49 +1,69 @@
-import express from 'express';
-import socket from 'socket.io';
-import http from 'http';
-
+import express, { Request, Response } from "express";
+import bodyParser from "body-parser";
+import http from "http";
+import { Server } from "socket.io";
 
 const app = express();
-app.use(express.static(__dirname + '/../public'));
+const port = process.env.PORT || 3000;
 
+// Middleware para analisar o corpo das requisições como JSON
+app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 8899;
+interface Quote {
+  symbol: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  time: number;
+}
 
-app.get('/teste', (req, res) => {
-    const msg = req.query.msg?.toString() || '';
+let quotes: Quote[] = [];
 
-    for(const client of clients) {
-        client.emit('msg', msg);
-    }
+// Endpoint para receber as cotações
+app.post("/quote", (req: Request, res: Response) => {
+  const quote: Quote = req.body;
 
-    res.json({
-        ok: true,
-        msg
-    });
-})
+  // Adicionar validação e tratamento de erros conforme necessário
+  if (
+    !quote.symbol ||
+    !quote.open ||
+    !quote.high ||
+    !quote.low ||
+    !quote.close ||
+    !quote.time
+  ) {
+    return res.status(400).send("Dados de cotação inválidos");
+  }
 
-const httpServer = http.createServer(app);
-const io = socket(httpServer, {
-    path: '/socket.io'
-})
+  quotes.push(quote);
 
-const clients : Array<any> = [];
+  // Emitir a cotação via WebSocket
+  io.emit("new-quote", quote);
 
+  res.status(200).send("Cotação recebida com sucesso");
+});
 
-io.on('connection', (client: socket.Socket) => {
-    client.on('join', (params: string) => {
-        clients.push(client);
-        console.log(`Joined: ${client.id} ${params}`);
-    });
+// Configurar o servidor WebSocket
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 
-    client.on('disconnect', () => {
-        clients.splice(clients.indexOf(client), 1);
-        console.log(`Disconnected: ${client.id}`);
-    })
-})
+io.on("connection", (socket) => {
+  console.log("Um cliente se conectou");
 
+  // Enviar as cotações armazenadas ao novo cliente
+  socket.emit("initial-quotes", quotes);
 
+  socket.on("disconnect", () => {
+    console.log("Um cliente se desconectou");
+  });
+});
 
-httpServer.listen(PORT, () => {
-    console.log('Server http started at ' + PORT);
+server.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
