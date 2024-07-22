@@ -20,23 +20,20 @@ interface Quote {
 
 let quotes: Quote[] = [];
 
-app.get("/acorda", (req: Request, res: Response) => {
-  res.status(200).send("Acordei!");
-});
-
 // Endpoint para receber as cotações
 app.post("/quote", (req: Request, res: Response) => {
   const quote: Quote = req.body;
-  console.log(quote);
 
-  // Adicionar validação e tratamento de erros conforme necessário
+  console.log("Received quote:", quote);
+
+  // Validação básica dos dados recebidos
   if (
     !quote.symbol ||
-    !quote.open ||
-    !quote.high ||
-    !quote.low ||
-    !quote.close ||
-    !quote.time
+    typeof quote.open !== "number" ||
+    typeof quote.high !== "number" ||
+    typeof quote.low !== "number" ||
+    typeof quote.close !== "number" ||
+    typeof quote.time !== "number"
   ) {
     return res.status(400).send("Dados de cotação inválidos");
   }
