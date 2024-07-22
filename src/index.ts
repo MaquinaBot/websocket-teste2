@@ -23,6 +23,7 @@ let quotes: Quote[] = [];
 // Endpoint para receber as cotações
 app.post("/quote", (req: Request, res: Response) => {
   const quote: Quote = req.body;
+  console.log(quote);
 
   // Adicionar validação e tratamento de erros conforme necessário
   if (
