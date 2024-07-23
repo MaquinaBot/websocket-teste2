@@ -24,7 +24,7 @@ let quotes: Quote[] = [];
 app.post("/quote", (req: Request, res: Response) => {
   const quote: Quote = req.body;
 
-  console.log("Received quote:", quote);
+  console.log("Received quote:", req); // Log para verificar o corpo da requisição
 
   // Validação básica dos dados recebidos
   if (
