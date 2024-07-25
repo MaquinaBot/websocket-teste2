@@ -9,8 +9,10 @@ const port = process.env.PORT || 3000;
 // Middleware para analisar o corpo das requisições como JSON
 app.use(bodyParser.json());
 
+// Middleware para analisar o corpo das requisições como application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: true }));
+
 interface Quote {
-  symbol: string;
   open: number;
   high: number;
   low: number;
@@ -23,25 +25,33 @@ let quotes: Quote[] = [];
 // Endpoint para receber as cotações
 app.post("/quote", (req: Request, res: Response) => {
   const quote: Quote = req.body;
-
-  console.log("Received quote:", req); // Log para verificar o corpo da requisição
+  //console.log("Received quote:", quote); // Log para verificar o corpo da requisição
 
   // Validação básica dos dados recebidos
   if (
-    !quote.symbol ||
     typeof quote.open !== "number" ||
     typeof quote.high !== "number" ||
     typeof quote.low !== "number" ||
     typeof quote.close !== "number" ||
-    typeof quote.time !== "number"
+    typeof quote.time !== "string"
   ) {
     return res.status(400).send("Dados de cotação inválidos");
   }
 
-  quotes.push(quote);
-
+  // Verificar se já existe uma cotação com o mesmo time
+  const existingIndex = quotes.findIndex((q) => q.time === quote.time);
+  if (existingIndex !== -1) {
+    // Substituir o objeto existente
+    quotes[existingIndex] = quote;
+  } else {
+    // Adicionar novo objeto e remover o mais antigo se necessário
+    if (quotes.length >= 60) {
+      quotes.shift(); // Remover o primeiro objeto
+    }
+    quotes.push(quote);
+  }
   // Emitir a cotação via WebSocket
-  io.emit("new-quote", quote);
+  io.emit("message", quote);
 
   res.status(200).send("Cotação recebida com sucesso");
 });
@@ -60,6 +70,10 @@ io.on("connection", (socket) => {
 
   // Enviar as cotações armazenadas ao novo cliente
   socket.emit("initial-quotes", quotes);
+
+  socket.on("message", (message) => {
+    console.log(`Mensagem recebida: ${message}`);
+  });
 
   socket.on("disconnect", () => {
     console.log("Um cliente se desconectou");
